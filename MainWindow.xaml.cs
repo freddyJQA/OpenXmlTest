@@ -113,7 +113,12 @@ namespace OpenXmlTest
 
             foreach (DataColumn column in ds.Tables[tableIndex].Columns)
             {
-                Cell cell = CreateTextCell(ds.Tables[tableIndex].Columns.IndexOf(column) + 1, 1, column.ColumnName);
+                RunProperties runProperties = new RunProperties();
+                runProperties.Append(new Bold());
+                runProperties.Append(new Color() { Rgb = "aaaaaa" });
+                runProperties.Append(new FontSize() { Val = 20 });
+
+                Cell cell = CreateTextCell(ds.Tables[tableIndex].Columns.IndexOf(column) + 1, 1, column.ColumnName, runProperties);
                 row.AppendChild(cell);
             }
         }
@@ -144,20 +149,27 @@ namespace OpenXmlTest
             return row;
         }
 
-        private Cell CreateTextCell(int columnIndex, int rowIndex, object cellValue)
+        private Cell CreateTextCell(int columnIndex, int rowIndex, object cellValue, RunProperties runProperties = null)
         {
             Cell cell = new Cell
             {
                 DataType = CellValues.InlineString,
-                CellReference = GetColumnName(columnIndex) + rowIndex
-            };
+                CellReference = GetColumnName(columnIndex) + rowIndex,
+            };           
 
-            InlineString inlineString = new InlineString();
             Text text = new Text
             {
                 Text = cellValue.ToString()
             };
-            inlineString.AppendChild(text);
+
+            Run run = new Run();
+            run.Append(text);
+
+            if (runProperties != null)
+                run.RunProperties = runProperties;
+
+            InlineString inlineString = new InlineString();
+            inlineString.Append(run);
             cell.AppendChild(inlineString);
 
             return cell;
