@@ -1,12 +1,24 @@
 ﻿using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
+using DocumentFormat.OpenXml.Wordprocessing;
 using Microsoft.Win32;
 using System;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
 using System.Windows;
+using Bold = DocumentFormat.OpenXml.Spreadsheet.Bold;
+using Color = DocumentFormat.OpenXml.Spreadsheet.Color;
+using FontSize = DocumentFormat.OpenXml.Spreadsheet.FontSize;
+using RunSpreadsheet = DocumentFormat.OpenXml.Spreadsheet.Run;
+using Run = DocumentFormat.OpenXml.Wordprocessing.Run;
+using RunProperties = DocumentFormat.OpenXml.Spreadsheet.RunProperties;
+using Text = DocumentFormat.OpenXml.Wordprocessing.Text;
+using System.Linq;
+using Table = DocumentFormat.OpenXml.Wordprocessing.Table;
+using TableStyle = DocumentFormat.OpenXml.Wordprocessing.TableStyle;
+using System.IO;
 
 namespace OpenXmlTest
 {
@@ -18,6 +30,8 @@ namespace OpenXmlTest
         {
             InitializeComponent();
         }
+
+        #region Query
 
         private void BtnEjecutar_Click(object sender, RoutedEventArgs e)
         {
@@ -46,7 +60,12 @@ namespace OpenXmlTest
             };
 
             btnExportar.IsEnabled = rows > decimal.Zero;
+            btnWord.IsEnabled = rows > decimal.Zero;
         }
+
+        #endregion
+
+        #region Excel
 
         private void BtnExportar_Click(object sender, RoutedEventArgs e)
         {
@@ -147,8 +166,8 @@ namespace OpenXmlTest
             }
 
             return row;
-        }
 
+        }
         private Cell CreateTextCell(int columnIndex, int rowIndex, object cellValue, RunProperties runProperties = null)
         {
             Cell cell = new Cell
@@ -162,7 +181,7 @@ namespace OpenXmlTest
                 Text = cellValue.ToString()
             };
 
-            Run run = new Run();
+            RunSpreadsheet run = new RunSpreadsheet();
             run.Append(text);
 
             if (runProperties != null)
@@ -190,5 +209,137 @@ namespace OpenXmlTest
 
             return columnName;
         }
+
+        #endregion
+
+        #region Word
+
+        private void BtnWord_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog()
+            {
+                Filter = "Word documents (.docx)|*.docx",
+            };
+
+            if (!(bool)openFileDialog.ShowDialog())
+                return;
+
+            using (FileStream templateFile = File.Open(openFileDialog.FileName, FileMode.Open, FileAccess.Read))
+            {
+                using (MemoryStream stream = new MemoryStream())
+                {
+                    // Crea una copia de la plantilla en memoria.
+                    templateFile.CopyTo(stream);
+
+                    // Inserta la data en la copia.
+                    using (WordprocessingDocument doc = WordprocessingDocument.Open(stream, true))
+                    {
+                        ChangeTextWord(doc);
+                        InsertTableWord(doc);
+                    };
+
+                    stream.Seek(0, SeekOrigin.Begin);
+
+                    // Guarda la copia en la ruta especificada.
+                    SaveFileDialog saveFileDialog = new SaveFileDialog()
+                    {
+                        FileName = "Word1",
+                        Filter = "Word documents (.docx)|*.docx",
+                    };
+
+                    if ((bool)saveFileDialog.ShowDialog())
+                    {
+                        using (FileStream fileStream = File.Create(saveFileDialog.FileName))
+                        {
+                            stream.CopyTo(fileStream);
+                        };
+                    }
+                };
+            };
+        }
+
+        private void ChangeTextWord(WordprocessingDocument doc)
+        {
+            // Encuentra la primera tabla en el documento.
+            Table table = doc.MainDocumentPart.Document.Body.Elements<Table>().First();
+
+            // Encuentra la segunda y tercera fila en la tabla.
+            TableRow row1 = table.Elements<TableRow>().ElementAt(1);
+            TableRow row2 = table.Elements<TableRow>().ElementAt(2);
+
+            // Encuentra las celdas a modificar.
+            TableCell cellNombre = row1.Elements<TableCell>().ElementAt(1);
+            TableCell cellApellido = row1.Elements<TableCell>().ElementAt(3);
+            TableCell cellEdad = row2.Elements<TableCell>().ElementAt(1);
+            TableCell cellDireccion = row2.Elements<TableCell>().ElementAt(3);
+
+            // Llena las celdas con los datos de la primera fila de la primera tabla del dataset.
+            cellNombre.AppendChild(new Paragraph(new Run(new Text("Freddy"))));
+            cellApellido.AppendChild(new Paragraph(new Run(new Text("Quintero"))));
+            cellEdad.AppendChild(new Paragraph(new Run(new Text("29"))));
+            cellDireccion.AppendChild(new Paragraph(new Run(new Text("Porlamar"))));
+        }
+
+        private void InsertTableWord(WordprocessingDocument doc)
+        {
+            // Encuentra la segunda tabla en el documento.
+            Table table = doc.MainDocumentPart.Document.Body.Elements<Table>().ElementAt(1);
+
+            // Encuentra la segunda fila en la tabla.
+            TableRow row = table.Elements<TableRow>().ElementAt(1);
+
+            // Encuentra la celda a modificar.
+            TableCell cell = row.Elements<TableCell>().First();
+
+            // Crea la tabla.
+            Table tbl = new Table();
+
+            // Establece estiloy y anchura a la tabla.
+            TableProperties tableProp = new TableProperties();
+            TableStyle tableStyle = new TableStyle() { Val = "TableGrid" };
+
+            // Hace que la tabla ocupe el 100% de la pagina.
+            TableWidth tableWidth = new TableWidth() { Width = "5000", Type = TableWidthUnitValues.Pct };
+
+            // Aplicar propiedades a la tabla.
+            tableProp.Append(tableStyle, tableWidth);
+            tbl.AppendChild(tableProp);
+
+            // Define las columnas de la tabla.
+            TableGrid tg = new TableGrid();
+            foreach (DataColumn column in ds.Tables[0].Columns)
+                tg.AppendChild(new GridColumn());
+            tbl.AppendChild(tg);
+
+            // Fila para las columnas de la tabla.
+            TableRow tblRowColumns = new TableRow();
+            tbl.AppendChild(tblRowColumns);
+
+            // Obtiene y asigna nombres a las columnas de la tabla.
+            foreach (DataColumn column in ds.Tables[0].Columns)
+            {
+                TableCell tblCell = new TableCell(new Paragraph(new Run(new Text(column.ColumnName))));
+                tblRowColumns.AppendChild(tblCell);
+            }
+
+            // Agrega el resto de las filas a la tabla.
+            foreach (DataRow dtRow in ds.Tables[0].Rows)
+            {
+                TableRow tblRow = new TableRow();
+
+                for (int i = 0; i < dtRow.Table.Columns.Count; i++)
+                {
+                    TableCell tblCell = new TableCell(new Paragraph(new Run(new Text(dtRow[i].ToString()))));
+                    tblRow.AppendChild(tblCell);
+                }
+
+                tbl.AppendChild(tblRow);
+            }
+
+            // Agrega la tabla al placeholder correspondiente.
+            cell.AppendChild(new Paragraph(new Run(tbl)));
+        }
+
+        #endregion
     }
 }

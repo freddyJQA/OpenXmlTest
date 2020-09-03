@@ -8,12 +8,11 @@
         Title="MainWindow" Height="217.637" Width="512">
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="296*"/>
-            <ColumnDefinition Width="33*"/>
-            <ColumnDefinition Width="183*"/>
+            <ColumnDefinition/>
         </Grid.ColumnDefinitions>
-        <TextBox x:Name="txtPrueba" HorizontalAlignment="Center" Height="119" Margin="0,10,0,0" TextWrapping="Wrap" AcceptsReturn="True" VerticalAlignment="Top" Width="492" Grid.ColumnSpan="3"/>
+        <TextBox x:Name="txtPrueba" Text="select top 5 * from ciudades" HorizontalAlignment="Center" Height="119" Margin="0,10,0,0" TextWrapping="Wrap" AcceptsReturn="True" VerticalAlignment="Top" Width="492" Grid.ColumnSpan="3"/>
         <Button x:Name="btnEjecutar" Content="Ejecutar" HorizontalAlignment="Left" Height="28" Margin="10,146,0,0" VerticalAlignment="Top" Width="93" Click="BtnEjecutar_Click" RenderTransformOrigin="-0.23,-1.174"/>
         <Button x:Name="btnExportar" Content="Exportar a excel" HorizontalAlignment="Left" Height="28" Margin="125,146,0,0" VerticalAlignment="Top" Width="116" RenderTransformOrigin="-0.23,-1.174" Click="BtnExportar_Click" IsEnabled="False"/>
+        <Button x:Name="btnWord" Content="Word" HorizontalAlignment="Left" Margin="265,146,0,0" VerticalAlignment="Top" Height="28" Width="90" IsEnabled="False" Click="BtnWord_Click"/>
     </Grid>
 </Window>
